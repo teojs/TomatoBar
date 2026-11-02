@@ -1,0 +1,7 @@
+.build
+dist
+*.app
+.env
+.DS_Store
+.idea
+.swiftpm

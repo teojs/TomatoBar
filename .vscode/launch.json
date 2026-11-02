@@ -1,0 +1,24 @@
+{
+  "configurations": [
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:tomato-app}",
+      "name": "Debug TomatoApp",
+      "target": "TomatoApp",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug TomatoApp"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:tomato-app}",
+      "name": "Release TomatoApp",
+      "target": "TomatoApp",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release TomatoApp"
+    }
+  ]
+}
