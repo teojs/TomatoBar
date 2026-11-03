@@ -1,6 +1,6 @@
-# Tomato
+# TomatoBar
 
-![Tomato](docs/img/tomato.png)
+![TomatoBar](docs/img/tomato.png)
 
 macOS 菜单栏番茄钟。启动后只在菜单栏显示图标和倒计时。
 
@@ -21,5 +21,5 @@ macOS 菜单栏番茄钟。启动后只在菜单栏显示图标和倒计时。
 
 ```bash
 ./build_app.sh
-open dist/Tomato.app
+open dist/TomatoBar.app
 ```

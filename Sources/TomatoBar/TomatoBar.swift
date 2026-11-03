@@ -3,7 +3,7 @@ import AppKit
 import Combine
 
 @main
-struct TomatoApp {
+struct TomatoBar {
     static func main() {
         let app = NSApplication.shared
         let delegate = AppDelegate()

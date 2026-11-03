@@ -4,21 +4,21 @@
       "type": "swift",
       "request": "launch",
       "args": [],
-      "cwd": "${workspaceFolder:tomato-app}",
-      "name": "Debug TomatoApp",
-      "target": "TomatoApp",
+      "cwd": "${workspaceFolder:TomatoBar}",
+      "name": "Debug TomatoBar",
+      "target": "TomatoBar",
       "configuration": "debug",
-      "preLaunchTask": "swift: Build Debug TomatoApp"
+      "preLaunchTask": "swift: Build Debug TomatoBar"
     },
     {
       "type": "swift",
       "request": "launch",
       "args": [],
-      "cwd": "${workspaceFolder:tomato-app}",
-      "name": "Release TomatoApp",
-      "target": "TomatoApp",
+      "cwd": "${workspaceFolder:TomatoBar}",
+      "name": "Release TomatoBar",
+      "target": "TomatoBar",
       "configuration": "release",
-      "preLaunchTask": "swift: Build Release TomatoApp"
+      "preLaunchTask": "swift: Build Release TomatoBar"
     }
   ]
 }

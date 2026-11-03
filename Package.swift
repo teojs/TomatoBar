@@ -2,17 +2,17 @@
 import PackageDescription
 
 let package = Package(
-    name: "TomatoApp",
+    name: "TomatoBar",
     platforms: [
         .macOS(.v15)
     ],
     products: [
-        .executable(name: "TomatoApp", targets: ["TomatoApp"])
+        .executable(name: "TomatoBar", targets: ["TomatoBar"])
     ],
     targets: [
         .executableTarget(
-            name: "TomatoApp",
-            path: "Sources/TomatoApp"
+            name: "TomatoBar",
+            path: "Sources/TomatoBar"
         )
     ]
 )

@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>TomatoApp</string>
+    <string>TomatoBar</string>
     <key>CFBundleIdentifier</key>
-    <string>com.teojs.TomatoApp</string>
+    <string>com.teojs.TomatoBar</string>
     <key>CFBundleName</key>
-    <string>Tomato</string>
+    <string>TomatoBar</string>
     <key>CFBundleDisplayName</key>
-    <string>Tomato</string>
+    <string>TomatoBar</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
