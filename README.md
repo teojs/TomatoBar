@@ -1,5 +1,7 @@
 # Tomato
 
+![Tomato](docs/img/tomato.png)
+
 macOS 菜单栏番茄钟。启动后只在菜单栏显示图标和倒计时。
 
 需要 macOS 27 或更高版本。
