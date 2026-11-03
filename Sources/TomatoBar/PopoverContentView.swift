@@ -153,6 +153,17 @@ struct PopoverContentView: View {
 
                 Divider()
 
+                Button("关于 TomatoBar") {
+                    NSApp.activate(ignoringOtherApps: true)
+                    NSApp.orderFrontStandardAboutPanel(nil)
+                }
+
+                Button("GitHub") {
+                    if let url = URL(string: "https://github.com/teojs/TomatoBar") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+
                 Button("退出 Tomato") {
                     NSApplication.shared.terminate(nil)
                 }
