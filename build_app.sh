@@ -20,6 +20,25 @@ mkdir -p "${RESOURCES_DIR}"
 cp ".build/release/TomatoBar" "${MACOS_DIR}/TomatoBar"
 cp "Info.plist" "${CONTENTS_DIR}/Info.plist"
 
+# 未设置时沿用 Info.plist。发布时由 git tag 和 GitHub Actions 运行号写入。
+if [ -n "${MARKETING_VERSION:-}" ]; then
+    if [[ ! "${MARKETING_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo "MARKETING_VERSION 必须是 x.y.z，当前是: ${MARKETING_VERSION}" >&2
+        exit 1
+    fi
+    /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${MARKETING_VERSION}" "${CONTENTS_DIR}/Info.plist"
+fi
+if [ -n "${BUILD_NUMBER:-}" ]; then
+    if [[ ! "${BUILD_NUMBER}" =~ ^[0-9]+$ ]]; then
+        echo "BUILD_NUMBER 必须是整数，当前是: ${BUILD_NUMBER}" >&2
+        exit 1
+    fi
+    /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER}" "${CONTENTS_DIR}/Info.plist"
+fi
+MARKETING_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "${CONTENTS_DIR}/Info.plist")"
+BUILD_NUMBER="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "${CONTENTS_DIR}/Info.plist")"
+echo "🏷  版本 ${MARKETING_VERSION} (${BUILD_NUMBER})"
+
 # SwiftPM 会把 SDK 版本写成部署目标。改回当前 SDK，macOS 27 才会使用新版界面。
 SDK_VERSION="$(xcrun --show-sdk-version)"
 vtool -set-build-version macos 15.0 "${SDK_VERSION}" -replace -output "${MACOS_DIR}/TomatoBar" "${MACOS_DIR}/TomatoBar" >/dev/null
