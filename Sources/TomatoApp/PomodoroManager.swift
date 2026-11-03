@@ -135,15 +135,32 @@ final class PomodoroManager: NSObject, ObservableObject {
         isRunning = true
         endDate = Date().addingTimeInterval(TimeInterval(remainingSeconds))
 
+        scheduleTick()
+    }
+
+    /// 对齐到下一秒的边界只唤醒一次，避免 0.25 秒轮询。
+    private func scheduleTick() {
         timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+        guard isRunning, let endDate else {
+            timer = nil
+            return
+        }
+        let remaining = endDate.timeIntervalSinceNow
+        if remaining <= 0 {
+            timer = nil
+            tick()
+            return
+        }
+        let fraction = remaining - floor(remaining)
+        let delay = fraction < 0.05 ? fraction + 1 : fraction
+        let next = Timer(timeInterval: delay, repeats: false) { [weak self] _ in
             Task { @MainActor in
                 self?.tick()
             }
         }
-        if let timer {
-            RunLoop.main.add(timer, forMode: .common)
-        }
+        next.tolerance = 0.05
+        timer = next
+        RunLoop.main.add(next, forMode: .common)
     }
 
     func pause() {
@@ -197,6 +214,7 @@ final class PomodoroManager: NSObject, ObservableObject {
         isAdjustingDuration = false
         if isRunning {
             endDate = Date().addingTimeInterval(TimeInterval(remainingSeconds))
+            scheduleTick()
         }
     }
 
@@ -207,9 +225,12 @@ final class PomodoroManager: NSObject, ObservableObject {
         if remaining <= 0 {
             remainingSeconds = 0
             handlePhaseCompleted()
-        } else if remaining != remainingSeconds {
+            return
+        }
+        if remaining != remainingSeconds {
             remainingSeconds = remaining
         }
+        scheduleTick()
     }
 
     private func handlePhaseCompleted() {

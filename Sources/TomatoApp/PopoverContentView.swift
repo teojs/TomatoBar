@@ -190,7 +190,6 @@ private struct DurationDialView: View {
                     )
                     .rotationEffect(.degrees(-90))
                     .frame(width: radius * 2, height: radius * 2)
-                    .animation(isDragging ? nil : .linear(duration: 0.25), value: dialFraction)
 
                 Circle()
                     .fill(manager.phase.themeColor)
@@ -198,7 +197,6 @@ private struct DurationDialView: View {
                     .overlay(Circle().stroke(Color.white.opacity(0.9), lineWidth: 2))
                     .shadow(color: manager.phase.themeColor.opacity(0.35), radius: 3, y: 1)
                     .offset(knobOffset(radius: radius))
-                    .animation(isDragging ? nil : .linear(duration: 0.25), value: dialFraction)
 
                 VStack(spacing: 8) {
                     CountdownDisplayView(formattedTime: manager.formattedTime)

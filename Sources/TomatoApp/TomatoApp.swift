@@ -20,6 +20,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private let manager = PomodoroManager()
     private var cancellables = Set<AnyCancellable>()
     private var eventMonitor: Any?
+    private var cachedMenuBarKey: String?
+    private var symbolCache: [String: NSImage] = [:]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupPopover()
@@ -63,6 +65,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
         NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
             .receive(on: RunLoop.main)
+            .map { [weak self] _ in self?.manager.showTimeInMenuBar ?? true }
+            .removeDuplicates()
             .sink { [weak self] _ in
                 self?.updateStatusButtonImage()
             }
@@ -91,6 +95,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         if popover.isShown {
             popover.performClose(sender)
         } else {
+            if popover.contentViewController == nil {
+                popover.contentViewController = PopoverHostingController(
+                    rootView: PopoverContentView(manager: manager)
+                )
+            }
             popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .maxY)
             NSApp.activate(ignoringOtherApps: true)
             popover.contentViewController?.view.window?.makeKeyAndOrderFront(nil)
@@ -102,42 +111,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         statusItem.button?.highlight(false)
     }
 
+    func popoverDidClose(_ notification: Notification) {
+        // 收起后卸掉 SwiftUI 面板，倒计时刷新不再驱动 Liquid Glass
+        popover.contentViewController = nil
+    }
+
     private func updateStatusButtonImage() {
         guard let button = statusItem?.button else { return }
-        button.image = renderMenuBarImage(
-            iconName: manager.menuBarIconName,
-            timeText: manager.showTimeInMenuBar ? manager.formattedTime : nil
-        )
+        let iconName = manager.menuBarIconName
+        let timeText = manager.showTimeInMenuBar ? manager.formattedTime : nil
+        let key = "\(iconName)|\(timeText ?? "-")"
+        if key != cachedMenuBarKey {
+            cachedMenuBarKey = key
+            button.image = renderMenuBarImage(iconName: iconName, timeText: timeText)
+        }
         if popover.isShown {
             button.highlight(true)
         }
     }
 
     private func renderMenuBarImage(iconName: String, timeText: String?) -> NSImage {
-        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
-        let symbolImage = NSImage(systemSymbolName: iconName, accessibilityDescription: nil)?
-            .withSymbolConfiguration(symbolConfig)
-
+        let symbolImage = symbol(named: iconName)
         let iconWidth: CGFloat = 18
         let height: CGFloat = 22
 
         guard let timeText else {
             let size = NSSize(width: iconWidth, height: height)
-            let image = NSImage(size: size, flipped: false) { rect in
-                if let symbolImage {
-                    let symSize = symbolImage.size
-                    let symRect = NSRect(
-                        x: (rect.width - symSize.width) / 2,
-                        y: (rect.height - symSize.height) / 2,
-                        width: symSize.width,
-                        height: symSize.height
-                    )
-                    symbolImage.draw(in: symRect)
-                }
-                return true
+            return makeTemplateImage(size: size) { rect in
+                guard let symbolImage else { return }
+                let symSize = symbolImage.size
+                symbolImage.draw(in: NSRect(
+                    x: (rect.width - symSize.width) / 2,
+                    y: (rect.height - symSize.height) / 2,
+                    width: symSize.width,
+                    height: symSize.height
+                ))
             }
-            image.isTemplate = true
-            return image
         }
 
         let font = NSFont.monospacedDigitSystemFont(ofSize: 12.5, weight: .medium)
@@ -145,40 +154,76 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             .font: font,
             .foregroundColor: NSColor.black
         ]
-
         let spacing: CGFloat = 4
         let digitWidth: CGFloat = 8.2
         let colonWidth: CGFloat = 4.6
         let textTotalWidth: CGFloat = digitWidth * 4 + colonWidth
-        let totalWidth: CGFloat = ceil(iconWidth + spacing + textTotalWidth + 2)
+        let size = NSSize(width: ceil(iconWidth + spacing + textTotalWidth + 2), height: height)
 
-        let size = NSSize(width: totalWidth, height: height)
-        let image = NSImage(size: size, flipped: false) { rect in
+        return makeTemplateImage(size: size) { rect in
             if let symbolImage {
                 let symSize = symbolImage.size
-                let symRect = NSRect(
+                symbolImage.draw(in: NSRect(
                     x: (iconWidth - symSize.width) / 2,
                     y: (rect.height - symSize.height) / 2,
                     width: symSize.width,
                     height: symSize.height
-                )
-                symbolImage.draw(in: symRect)
+                ))
             }
-
             var currentX = iconWidth + spacing
             for char in timeText {
                 let str = String(char) as NSString
                 let slotWidth = (char == ":") ? colonWidth : digitWidth
                 let charSize = str.size(withAttributes: attributes)
-                let drawPoint = NSPoint(
+                str.draw(at: NSPoint(
                     x: currentX + (slotWidth - charSize.width) / 2,
                     y: (rect.height - charSize.height) / 2 - 0.5
-                )
-                str.draw(at: drawPoint, withAttributes: attributes)
+                ), withAttributes: attributes)
                 currentX += slotWidth
             }
-            return true
         }
+    }
+
+    private func symbol(named name: String) -> NSImage? {
+        if let cached = symbolCache[name] { return cached }
+        let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
+        let image = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
+            .withSymbolConfiguration(config)
+        if let image {
+            symbolCache[name] = image
+        }
+        return image
+    }
+
+    /// 画进位图后再交给状态栏。带绘制回调的 NSImage 会在菜单栏每次重绘时重跑，倒计时会因此一直占 CPU。
+    private func makeTemplateImage(size: NSSize, draw: (NSRect) -> Void) -> NSImage {
+        let scale = NSScreen.main?.backingScaleFactor ?? 2
+        let pixelsWide = max(1, Int((size.width * scale).rounded(.up)))
+        let pixelsHigh = max(1, Int((size.height * scale).rounded(.up)))
+        let image = NSImage(size: size)
+        guard let rep = NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: pixelsWide,
+            pixelsHigh: pixelsHigh,
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bytesPerRow: 0,
+            bitsPerPixel: 0
+        ) else {
+            return image
+        }
+        rep.size = size
+        NSGraphicsContext.saveGraphicsState()
+        if let context = NSGraphicsContext(bitmapImageRep: rep) {
+            NSGraphicsContext.current = context
+            draw(NSRect(origin: .zero, size: size))
+            context.flushGraphics()
+        }
+        NSGraphicsContext.restoreGraphicsState()
+        image.addRepresentation(rep)
         image.isTemplate = true
         return image
     }
