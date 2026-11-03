@@ -239,8 +239,10 @@ final class PopoverHostingController<Content: View>: NSHostingController<Content
         }
         if let effectView = root?.findSubview(ofType: NSVisualEffectView.self) {
             effectView.material = .menu
-            effectView.enumerateSubviews(ofType: NSGlassEffectView.self) { glassView in
-                glassView.tintColor = .clear
+            if !LegacyInterfacePreview.enabled, #available(macOS 26, *) {
+                effectView.enumerateSubviews(ofType: NSGlassEffectView.self) { glassView in
+                    glassView.tintColor = .clear
+                }
             }
         }
     }

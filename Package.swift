@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "TomatoApp",
     platforms: [
-        .macOS(.v27)
+        .macOS(.v15)
     ],
     products: [
         .executable(name: "TomatoApp", targets: ["TomatoApp"])

@@ -20,6 +20,10 @@ mkdir -p "${RESOURCES_DIR}"
 cp ".build/release/TomatoApp" "${MACOS_DIR}/TomatoApp"
 cp "Info.plist" "${CONTENTS_DIR}/Info.plist"
 
+# SwiftPM 会把 SDK 版本写成部署目标。改回当前 SDK，macOS 27 才会使用新版界面。
+SDK_VERSION="$(xcrun --show-sdk-version)"
+vtool -set-build-version macos 15.0 "${SDK_VERSION}" -replace -output "${MACOS_DIR}/TomatoApp" "${MACOS_DIR}/TomatoApp" >/dev/null
+
 echo "🎨 正在生成 App 图标..."
 MASTER_PNG="$(mktemp -t tomato-icon).png"
 ICONSET_DIR="$(mktemp -d -t tomato-iconset)"
@@ -46,7 +50,7 @@ xcrun actool "${ICON_DOC}" \
     --development-region en \
     --target-device mac \
     --platform macosx \
-    --minimum-deployment-target 26.0 \
+    --minimum-deployment-target 15.0 \
     --include-all-app-icons \
     --enable-icon-stack-fallback-generation=disabled \
     --output-partial-info-plist /dev/null \

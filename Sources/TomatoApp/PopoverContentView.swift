@@ -1,5 +1,10 @@
 import SwiftUI
 
+/// 设为 true 后，在这台 Mac 上强制使用 macOS 15 的分段选择器和标准按钮。看完改回 false。
+enum LegacyInterfacePreview {
+    static let enabled = false
+}
+
 struct PopoverContentView: View {
     @ObservedObject var manager: PomodoroManager
 
@@ -7,7 +12,7 @@ struct PopoverContentView: View {
         VStack(spacing: 0) {
             headerBar
                 .padding(.horizontal, 16)
-                .padding(.top, 14)
+                .padding(.top, 16)
                 .padding(.bottom, 8)
 
             mainTimerView
@@ -16,21 +21,30 @@ struct PopoverContentView: View {
                 .opacity(0.4)
 
             footerBar
-                .padding(.horizontal, 18)
-                .padding(.vertical, 12)
+                .padding(.horizontal, 12)
+                .padding(.top, 10)
+                .padding(.bottom, 14)
         }
         .frame(width: 260, height: 350)
         .animation(.smooth(duration: 0.25), value: manager.phase)
     }
 
-    // MARK: - Top Header (Native Liquid Glass Tabs)
+    // MARK: - Top Header
+    @ViewBuilder
     private var headerBar: some View {
+        if !LegacyInterfacePreview.enabled, #available(macOS 27, *) {
+            phasePicker.pickerStyle(.tabs)
+        } else {
+            phasePicker.pickerStyle(.segmented)
+        }
+    }
+
+    private var phasePicker: some View {
         Picker("阶段", selection: phaseBinding) {
             ForEach(PomodoroPhase.allCases, id: \.self) { item in
                 Text(item.title).tag(item)
             }
         }
-        .pickerStyle(.tabs)
         .controlSize(.large)
         .labelsHidden()
     }
@@ -54,55 +68,60 @@ struct PopoverContentView: View {
             DurationDialView(manager: manager, dotColor: dotColor(for:))
                 .frame(width: 176, height: 176)
 
-            // Controls: Reset | Play/Pause | Skip (Native Liquid Glass Buttons)
-            GlassEffectContainer(spacing: 18) {
-                HStack(spacing: 18) {
-                    Button {
-                        manager.reset()
-                    } label: {
-                        Image(systemName: "arrow.counterclockwise")
-                            .font(.system(size: 14, weight: .medium))
-                            .frame(width: 20, height: 20)
-                    }
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.circle)
-                    .controlSize(.large)
-                    .help("重置当前计时")
-
-                    Button {
-                        manager.toggleStartPause()
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: manager.isRunning ? "pause.fill" : "play.fill")
-                                .font(.system(size: 13, weight: .bold))
-                            Text(manager.isRunning ? "暂停" : (manager.remainingSeconds < manager.totalSeconds ? "继续" : "开始"))
-                                .font(.system(size: 14, weight: .semibold))
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 4)
-                    }
-                    .buttonStyle(.glassProminent)
-                    .buttonBorderShape(.capsule)
-                    .tint(manager.phase.themeColor)
-                    .controlSize(.large)
-
-                    Button {
-                        manager.skipToNextPhase()
-                    } label: {
-                        Image(systemName: "forward.end.fill")
-                            .font(.system(size: 14, weight: .medium))
-                            .frame(width: 20, height: 20)
-                    }
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.circle)
-                    .controlSize(.large)
-                    .help("跳过当前阶段")
-                }
-            }
+            timerControls
 
             Spacer(minLength: 4)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private var timerControls: some View {
+        if !LegacyInterfacePreview.enabled, #available(macOS 26, *) {
+            GlassEffectContainer(spacing: 18) {
+                timerControlButtons
+            }
+        } else {
+            timerControlButtons
+        }
+    }
+
+    private var timerControlButtons: some View {
+        HStack(spacing: 18) {
+            Button {
+                manager.reset()
+            } label: {
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.system(size: 14, weight: .medium))
+                    .frame(width: 20, height: 20)
+            }
+            .timerControlStyle(prominent: false, tint: manager.phase.themeColor)
+            .help("重置当前计时")
+
+            Button {
+                manager.toggleStartPause()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: manager.isRunning ? "pause.fill" : "play.fill")
+                        .font(.system(size: 13, weight: .bold))
+                    Text(manager.isRunning ? "暂停" : (manager.remainingSeconds < manager.totalSeconds ? "继续" : "开始"))
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 4)
+            }
+            .timerControlStyle(prominent: true, tint: manager.phase.themeColor)
+
+            Button {
+                manager.skipToNextPhase()
+            } label: {
+                Image(systemName: "forward.end.fill")
+                    .font(.system(size: 14, weight: .medium))
+                    .frame(width: 20, height: 20)
+            }
+            .timerControlStyle(prominent: false, tint: manager.phase.themeColor)
+            .help("跳过当前阶段")
+        }
     }
 
     // MARK: - Bottom Bar
@@ -163,6 +182,31 @@ struct PopoverContentView: View {
     }
 }
 
+private extension View {
+    @ViewBuilder
+    func timerControlStyle(prominent: Bool, tint: Color) -> some View {
+        if !LegacyInterfacePreview.enabled, #available(macOS 26, *) {
+            if prominent {
+                self.buttonStyle(.glassProminent)
+                    .buttonBorderShape(.capsule)
+                    .tint(tint)
+                    .controlSize(.large)
+            } else {
+                self.buttonStyle(.glass)
+                    .buttonBorderShape(.circle)
+                    .controlSize(.large)
+            }
+        } else if prominent {
+            self.buttonStyle(.borderedProminent)
+                .tint(tint)
+                .controlSize(.large)
+        } else {
+            self.buttonStyle(.bordered)
+                .controlSize(.large)
+        }
+    }
+}
+
 /// 可拖动的时长圆环。一圈 60 分钟，从 12 点顺时针拖到对应刻度。
 private struct DurationDialView: View {
     @ObservedObject var manager: PomodoroManager
@@ -196,7 +240,23 @@ private struct DurationDialView: View {
                     .frame(width: 16, height: 16)
                     .overlay(Circle().stroke(Color.white.opacity(0.9), lineWidth: 2))
                     .shadow(color: manager.phase.themeColor.opacity(0.35), radius: 3, y: 1)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Circle())
                     .offset(knobOffset(radius: radius))
+                    .gesture(
+                        DragGesture(minimumDistance: 0, coordinateSpace: .named("dial"))
+                            .onChanged { value in
+                                if !isDragging {
+                                    isDragging = true
+                                    manager.beginDurationAdjustment()
+                                }
+                                manager.adjustRemaining(to: seconds(at: value.location, in: geo.size))
+                            }
+                            .onEnded { _ in
+                                isDragging = false
+                                manager.endDurationAdjustment()
+                            }
+                    )
 
                 VStack(spacing: 8) {
                     CountdownDisplayView(formattedTime: manager.formattedTime)
@@ -210,22 +270,8 @@ private struct DurationDialView: View {
                 }
                 .allowsHitTesting(false)
             }
+            .coordinateSpace(name: "dial")
             .frame(width: geo.size.width, height: geo.size.height)
-            .contentShape(Circle())
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { value in
-                        if !isDragging {
-                            isDragging = true
-                            manager.beginDurationAdjustment()
-                        }
-                        manager.adjustRemaining(to: seconds(at: value.location, in: geo.size))
-                    }
-                    .onEnded { _ in
-                        isDragging = false
-                        manager.endDurationAdjustment()
-                    }
-            )
         }
     }
 
