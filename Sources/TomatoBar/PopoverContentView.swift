@@ -160,7 +160,7 @@ struct PopoverContentView: View {
                     UpdateChecker.check()
                 }
 
-                Button("GitHub") {
+                Button("前往 GitHub") {
                     if let url = URL(string: "https://github.com/teojs/TomatoBar") {
                         NSWorkspace.shared.open(url)
                     }
@@ -171,7 +171,7 @@ struct PopoverContentView: View {
                     NSApp.orderFrontStandardAboutPanel(nil)
                 }
 
-                Button("退出 Tomato") {
+                Button("退出 TomatoBar") {
                     NSApplication.shared.terminate(nil)
                 }
                 .keyboardShortcut("q")
