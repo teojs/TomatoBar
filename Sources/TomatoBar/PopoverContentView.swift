@@ -93,9 +93,10 @@ struct PopoverContentView: View {
             } label: {
                 Image(systemName: "arrow.counterclockwise")
                     .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.primary)
                     .frame(width: 20, height: 20)
             }
-            .timerControlStyle(prominent: false, tint: manager.phase.themeColor)
+            .timerControlStyle(prominent: false)
             .help("重置当前计时")
 
             Button {
@@ -110,16 +111,18 @@ struct PopoverContentView: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 4)
             }
-            .timerControlStyle(prominent: true, tint: manager.phase.themeColor)
+            .timerControlStyle(prominent: !manager.isRunning, tint: manager.phase.themeColor, shape: .capsule)
+            .animation(.smooth(duration: 0.2), value: manager.isRunning)
 
             Button {
                 manager.skipToNextPhase()
             } label: {
                 Image(systemName: "forward.end.fill")
                     .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.primary)
                     .frame(width: 20, height: 20)
             }
-            .timerControlStyle(prominent: false, tint: manager.phase.themeColor)
+            .timerControlStyle(prominent: false)
             .help("跳过当前阶段")
         }
     }
@@ -197,14 +200,24 @@ struct PopoverContentView: View {
     }
 }
 
+private enum TimerButtonShape {
+    case circle
+    case capsule
+}
+
 private extension View {
     @ViewBuilder
-    func timerControlStyle(prominent: Bool, tint: Color) -> some View {
+    func timerControlStyle(prominent: Bool, tint: Color = .primary, shape: TimerButtonShape = .circle) -> some View {
         if !LegacyInterfacePreview.enabled, #available(macOS 26, *) {
             if prominent {
                 self.buttonStyle(.glassProminent)
-                    .buttonBorderShape(.capsule)
+                    .buttonBorderShape(shape == .capsule ? .capsule : .circle)
                     .tint(tint)
+                    .controlSize(.large)
+            } else if shape == .capsule {
+                self.buttonStyle(.glass)
+                    .buttonBorderShape(.capsule)
+                    .tint(tint.opacity(0.5))
                     .controlSize(.large)
             } else {
                 self.buttonStyle(.glass)
@@ -214,6 +227,10 @@ private extension View {
         } else if prominent {
             self.buttonStyle(.borderedProminent)
                 .tint(tint)
+                .controlSize(.large)
+        } else if shape == .capsule {
+            self.buttonStyle(.bordered)
+                .tint(tint.opacity(0.5))
                 .controlSize(.large)
         } else {
             self.buttonStyle(.bordered)
