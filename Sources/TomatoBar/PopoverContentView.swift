@@ -158,6 +158,10 @@ struct PopoverContentView: View {
                     NSApp.orderFrontStandardAboutPanel(nil)
                 }
 
+                Button("检查更新") {
+                    UpdateChecker.check()
+                }
+
                 Button("GitHub") {
                     if let url = URL(string: "https://github.com/teojs/TomatoBar") {
                         NSWorkspace.shared.open(url)
