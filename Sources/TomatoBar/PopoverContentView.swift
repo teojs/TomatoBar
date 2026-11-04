@@ -150,6 +150,12 @@ struct PopoverContentView: View {
 
                 Divider()
 
+                durationMenu("默认专注时长", phase: .focus)
+                durationMenu("默认短休息时长", phase: .shortBreak)
+                durationMenu("默认长休息时长", phase: .longBreak)
+
+                Divider()
+
                 Button("重置当前计时") {
                     manager.reset()
                 }
@@ -187,6 +193,25 @@ struct PopoverContentView: View {
             .fixedSize()
             .help("设置与更多")
         }
+    }
+
+    private func durationMenu(_ title: String, phase: PomodoroPhase) -> some View {
+        Menu(title) {
+            ForEach(PomodoroManager.durationOptions(for: phase), id: \.self) { minutes in
+                Toggle("\(minutes) 分钟", isOn: durationSelection(minutes, phase: phase))
+            }
+        }
+    }
+
+    private func durationSelection(_ minutes: Int, phase: PomodoroPhase) -> Binding<Bool> {
+        Binding(
+            get: { manager.minutes(for: phase) == minutes },
+            set: { isOn in
+                if isOn {
+                    manager.setDefaultMinutes(minutes, for: phase)
+                }
+            }
+        )
     }
 
     private func dotColor(for index: Int) -> Color {

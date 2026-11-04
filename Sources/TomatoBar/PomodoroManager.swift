@@ -83,6 +83,9 @@ final class PomodoroManager: NSObject, ObservableObject {
     @AppStorage("showTimeInMenuBar") var showTimeInMenuBar: Bool = true
     @AppStorage("soundEnabled") var soundEnabled: Bool = true
     @AppStorage("autoStartNextPhase") var autoStartNextPhase: Bool = false
+    @AppStorage("focusMinutes") var focusMinutes: Int = 25
+    @AppStorage("shortBreakMinutes") var shortBreakMinutes: Int = 5
+    @AppStorage("longBreakMinutes") var longBreakMinutes: Int = 15
 
     // MARK: - Daily Stats (Persisted)
     @AppStorage("todayDateString") private var todayDateString: String = ""
@@ -98,8 +101,55 @@ final class PomodoroManager: NSObject, ObservableObject {
 
     override init() {
         super.init()
+        let initial = duration(for: .focus)
+        remainingSeconds = initial
+        totalSeconds = initial
         checkAndResetDailyStatsIfNeeded()
         configureNotifications()
+    }
+
+    func minutes(for phase: PomodoroPhase) -> Int {
+        switch phase {
+        case .focus:
+            return focusMinutes
+        case .shortBreak:
+            return shortBreakMinutes
+        case .longBreak:
+            return longBreakMinutes
+        }
+    }
+
+    func duration(for phase: PomodoroPhase) -> Int {
+        minutes(for: phase) * 60
+    }
+
+    /// 专注：5…60，步长 5。休息：1…10 步长 1，之后到 30 步长 5。
+    static func durationOptions(for phase: PomodoroPhase) -> [Int] {
+        switch phase {
+        case .focus:
+            return Array(stride(from: 5, through: 60, by: 5))
+        case .shortBreak, .longBreak:
+            return Array(1...10) + Array(stride(from: 15, through: 30, by: 5))
+        }
+    }
+
+    func setDefaultMinutes(_ minutes: Int, for phase: PomodoroPhase) {
+        let options = Self.durationOptions(for: phase)
+        let clamped = options.min(by: { abs($0 - minutes) < abs($1 - minutes) }) ?? minutes
+        switch phase {
+        case .focus:
+            focusMinutes = clamped
+        case .shortBreak:
+            shortBreakMinutes = clamped
+        case .longBreak:
+            longBreakMinutes = clamped
+        }
+        registerNotificationCategories()
+        if self.phase == phase, !isRunning {
+            let seconds = clamped * 60
+            totalSeconds = seconds
+            remainingSeconds = seconds
+        }
     }
 
     // MARK: - Computed Properties
@@ -176,8 +226,8 @@ final class PomodoroManager: NSObject, ObservableObject {
 
     func reset() {
         pause()
-        remainingSeconds = phase.defaultDuration
-        totalSeconds = phase.defaultDuration
+        remainingSeconds = duration(for: phase)
+        totalSeconds = duration(for: phase)
     }
 
     func skipToNextPhase() {
@@ -188,8 +238,8 @@ final class PomodoroManager: NSObject, ObservableObject {
     func switchPhase(to newPhase: PomodoroPhase) {
         pause()
         phase = newPhase
-        totalSeconds = newPhase.defaultDuration
-        remainingSeconds = newPhase.defaultDuration
+        totalSeconds = duration(for: newPhase)
+        remainingSeconds = duration(for: newPhase)
     }
 
     func beginDurationAdjustment() {
@@ -271,8 +321,8 @@ final class PomodoroManager: NSObject, ObservableObject {
             phase = .focus
         }
 
-        totalSeconds = phase.defaultDuration
-        remainingSeconds = phase.defaultDuration
+        totalSeconds = duration(for: phase)
+        remainingSeconds = duration(for: phase)
     }
 
     private func checkAndResetDailyStatsIfNeeded() {
@@ -300,6 +350,11 @@ final class PomodoroManager: NSObject, ObservableObject {
         guard Bundle.main.bundleIdentifier != nil else { return }
         let center = UNUserNotificationCenter.current()
         center.delegate = self
+        registerNotificationCategories()
+        center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    private func registerNotificationCategories() {
         let categories = Set(PomodoroPhase.allCases.map { phase in
             let action = UNNotificationAction(
                 identifier: Self.startNextActionID,
@@ -313,8 +368,7 @@ final class PomodoroManager: NSObject, ObservableObject {
                 options: []
             )
         })
-        center.setNotificationCategories(categories)
-        center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        UNUserNotificationCenter.current().setNotificationCategories(categories)
     }
 
     private func sendNotification(for completedPhase: PomodoroPhase) {
@@ -325,14 +379,14 @@ final class PomodoroManager: NSObject, ObservableObject {
         case .focus:
             content.title = "专注完成！"
             content.body = next == .longBreak
-                ? "太棒了！你已完成一轮专注，开始 15 分钟长休息吧。"
-                : "辛苦了，站起来活动一下，开始 5 分钟短休息吧。"
+                ? "太棒了！你已完成一轮专注，开始 \(minutes(for: .longBreak)) 分钟长休息吧。"
+                : "辛苦了，站起来活动一下，开始 \(minutes(for: .shortBreak)) 分钟短休息吧。"
             if let attachment = symbolAttachment(systemName: "flame.fill", tint: NSColor(srgbRed: 0.95, green: 0.33, blue: 0.28, alpha: 1)) {
                 content.attachments = [attachment]
             }
         case .shortBreak, .longBreak:
             content.title = "休息结束"
-            content.body = "准备好开始下一个 25 分钟专注了吗？"
+            content.body = "准备好开始下一个 \(minutes(for: .focus)) 分钟专注了吗？"
             if let attachment = symbolAttachment(systemName: "cup.and.saucer.fill", tint: NSColor(srgbRed: 0.98, green: 0.72, blue: 0.18, alpha: 1)) {
                 content.attachments = [attachment]
             }
@@ -363,7 +417,7 @@ final class PomodoroManager: NSObject, ObservableObject {
     }
 
     private func startButtonTitle(for phase: PomodoroPhase) -> String {
-        let minutes = phase.defaultDuration / 60
+        let minutes = minutes(for: phase)
         switch phase {
         case .focus:
             return "开始\(minutes)分钟专注"
