@@ -1,8 +1,15 @@
-# TomatoBar
+<p align="center">
+  <img src="Resources/AppIcon.png" width="128" height="128"/>
+<p>
+ 
+<h1 align="center">TomatoBar</h1>
 
-![TomatoBar](docs/img/tomato.png)
+<p align="center">
+  <img src="docs/img/tomato.png"  alt="Screenshot" />
+<p>
 
-macOS 菜单栏番茄钟。启动后只在菜单栏显示图标和倒计时。
+
+macOS 菜单栏番茄时间管理。启动后只在菜单栏显示图标和倒计时。
 
 需要 macOS 15 或更高版本。
 
