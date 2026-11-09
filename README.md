@@ -22,7 +22,23 @@ macOS 菜单栏番茄计时器。启动后只在菜单栏显示图标和倒计�
 - 阶段结束时发送系统通知。未开启自动开始时，通知里可以一键开始下一阶段。
 - 记录当天完成的番茄数和专注分钟数。
 
-## 构建
+## 下载
+
+release: https://github.com/teojs/TomatoBar/releases
+
+## 常见问题
+
+Apple无法验证“TomatoBar”是否包含可能危害 Mac安全或泄漏隐私恶意软件。
+
+![alt text](docs/img/iShot_2026-11-09_15.31.21.png)
+
+解决方法：
+
+打开“系统偏好设置” -> “安全性与隐私” -> “安全性” -> “已阻止“TomatoBar”以保护Mac。” -> “允许打开”
+
+![alt text](docs/img/iShot_2026-11-09_15.32.03.png)
+
+## 自己构建
 
 ```bash
 ./build_app.sh
