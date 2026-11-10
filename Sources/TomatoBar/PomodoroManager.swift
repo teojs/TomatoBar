@@ -224,10 +224,20 @@ final class PomodoroManager: NSObject, ObservableObject {
         timer = nil
     }
 
+    /// 只把当前阶段的倒计时拨回默认时长，不改番茄计数。
     func reset() {
         pause()
         remainingSeconds = duration(for: phase)
         totalSeconds = duration(for: phase)
+    }
+
+    /// 菜单里的重置：倒计时、本轮进度点和今日专注数一起归零。
+    func resetCounting() {
+        reset()
+        objectWillChange.send()
+        completedInCycle = 0
+        todayCompletedCount = 0
+        todayFocusedMinutes = 0
     }
 
     func skipToNextPhase() {

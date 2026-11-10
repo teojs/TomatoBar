@@ -157,7 +157,7 @@ struct PopoverContentView: View {
                 Divider()
 
                 Button("重置当前计时") {
-                    manager.reset()
+                    manager.resetCounting()
                 }
 
                 Divider()
