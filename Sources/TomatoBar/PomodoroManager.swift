@@ -224,9 +224,13 @@ final class PomodoroManager: NSObject, ObservableObject {
         timer = nil
     }
 
-    /// 只把当前阶段的倒计时拨回默认时长，不改番茄计数。
+    /// 只把当前阶段的倒计时拨回默认时长，不改今日专注数。
+    /// 已经凑满一轮时，把本轮进度清掉，避免之后的专注又被当成第 4 个番茄。
     func reset() {
         pause()
+        if completedInCycle >= targetCycleCount {
+            completedInCycle = 0
+        }
         remainingSeconds = duration(for: phase)
         totalSeconds = duration(for: phase)
     }
@@ -247,6 +251,9 @@ final class PomodoroManager: NSObject, ObservableObject {
 
     func switchPhase(to newPhase: PomodoroPhase) {
         pause()
+        if phase == .longBreak, newPhase != .longBreak {
+            completedInCycle = 0
+        }
         phase = newPhase
         totalSeconds = duration(for: newPhase)
         remainingSeconds = duration(for: newPhase)
@@ -309,13 +316,14 @@ final class PomodoroManager: NSObject, ObservableObject {
 
         switch phase {
         case .focus:
+            if completedInCycle >= targetCycleCount {
+                completedInCycle = 0
+            }
             if recordFocusCompletion {
                 todayCompletedCount += 1
                 todayFocusedMinutes += (totalSeconds / 60)
-                completedInCycle += 1
-            } else {
-                completedInCycle += 1
             }
+            completedInCycle += 1
 
             if completedInCycle >= targetCycleCount {
                 phase = .longBreak
